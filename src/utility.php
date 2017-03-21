@@ -1,5 +1,5 @@
 <?php 
-namespace Enryzol\HjCommon;
+namespace HjCommon;
 
 
 class Utility{
