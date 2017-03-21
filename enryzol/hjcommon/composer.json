@@ -1,0 +1,12 @@
+{
+    "name": "enryzol/hjcommon",
+    "description": "my php functions",
+    "keywords": ["php", "functions"],
+    "license": "MIT",
+    "require": {
+        "php": ">=5.4.0"
+    },
+    "autoload": {
+         "psr-4": { "Ernyzol/HjCommon": "src/" }
+    }
+}
