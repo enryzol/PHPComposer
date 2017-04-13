@@ -7,7 +7,7 @@ class Http {
 		$Message['data'] 		= $data;
 		$Message['message'] 	= $message;
 		foreach($Message as $key=>$value){
-			if(empty($value)){
+			if(!isset($value)){
 				unset($Message[$key]);
 			}
 		}
