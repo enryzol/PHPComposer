@@ -3,6 +3,7 @@ namespace HjCommon\Auth;
 
 use think\Config;
 use think\Controller;
+use think\Debug;
 
 /**
  * @author Hjay
@@ -22,28 +23,41 @@ class HjCheck extends Controller{
     protected $MenuLeft ;
     protected $Menu ;
     protected $AuthMenu;
+    protected $su = 0;
     
 	protected $beforeActionList = [
 		'checkLogin','getMenu'
 	];
 	function checkLogin(){
-	    if(empty(session('AuthRoleID'))){
+
+		if(empty(session('AuthRoleID'))){
 	        $this->error('非法访问','/');
 	    }
 	    $request = \think\Request::instance();
+	    
+	    //超级管理员
+	    $or = db('role');
+	    $rinfo = $or->where(['roleid'=>session('AuthRoleID')])->find();
+	    $this->su = $rinfo['su'];
+	    
 	    $ob = db('role_auth');
-	    $info = $ob->where([
-	        'roleid'=>session('AuthRoleID'),
-	        'menu'=>$request->controller()."_".$request->action()
-	    ])->find();
-	    if(!$info){
-	        $this->error('非法访问');
+	    
+	    //验证权限 - 除了超级管理员
+	    if($this->su == 0){
+		    $info = $ob->where([
+		        'roleid'=>session('AuthRoleID'),
+		        'menu'=>$request->controller()."_".$request->action()
+		    ])->find();
+		    
+		    if(!$info){
+		        $this->error('非法访问');
+		    }
 	    }
+	    
 	    $tmp = $ob->where([
 	        'roleid'=>session('AuthRoleID')
 	    ])->select();
-	    
-// 	    print_r($tmp);
+	   	
 	    //读取数据库权限配置归类
 	    foreach($tmp as $key=>$value){
 	        $tmp1 = explode('_', $value['menu']);
@@ -51,12 +65,13 @@ class HjCheck extends Controller{
 	            $this->AuthMenu[$tmp1[0]][$tmp1[1]] = true;
 	        }
 	    }
-// 	    print_r($this->AuthMenu);
+	    
 	}
 	function getMenu(){
 		$Module = Config::get('AuthModule');
-		$MenuLeft = [];
+		$MenuLeft = [];  //普通用户菜单组
 		$Menu = [];
+		$MenuSuperUser = []; //超级管理员 菜单组
 		
 		$request = \think\Request::instance();
 		$CurrentUrl = $request->controller().'_'.$request->action();
@@ -66,7 +81,6 @@ class HjCheck extends Controller{
 			if(empty($class_methods)){ continue;}
 			$class_vars = get_class_vars($Module['Namespace'].'\\'.$value['Mudule']);
 			
-			
 			//菜单列表
 			$Menu[$value['Mudule']]['name'] = $value['Name'];
 			$Menu[$value['Mudule']]['module'] = $value['Mudule'];
@@ -75,6 +89,9 @@ class HjCheck extends Controller{
 			if($value['MenuShow']!==false){
 				$MenuLeft[$value['Mudule']]['name'] = $value['Name'];
 				$MenuLeft[$value['Mudule']]['module'] = $value['Mudule'];
+				
+				$MenuSuperUser[$value['Mudule']]['name'] = $value['Name'];
+				$MenuSuperUser[$value['Mudule']]['module'] = $value['Mudule'];
 			}
 			foreach($class_methods as $key1=>$value1){
 			    
@@ -112,6 +129,13 @@ class HjCheck extends Controller{
     					];
 				    }
     					
+				    $MenuSuperUser[$value['Mudule']]['value'][] = [
+			    		'name'	      => 	isset($config['name'])?$config['name']:"",
+			    		'active'	  => 	isset($config['active'])?$config['active']:$value1,
+			    		'module'      => 	$value['Mudule'],
+			    		'action'      => 	$value1,
+			    		'url'	      =>    URL($value['Mudule'].'/'.$value1)
+				    ];
 				}
 				
 				if($request->controller() == $value['Mudule'] && $request->action() == $value1){
@@ -124,11 +148,16 @@ class HjCheck extends Controller{
 		$this->Menu = $Menu;
 		$this->MenuLeft = $MenuLeft;
 		
+		//超级管理员赋予所有目录
+		if($this->su == 1){
+			$this->MenuLeft = $MenuSuperUser;
+		}
+		
 		//删除空菜单
 		foreach($this->MenuLeft as $key2=>$value2){
-		    if(empty($value2['value'])){
-		        unset($this->MenuLeft[$key2]);
-		    }
+			if(empty($value2['value'])){
+				unset($this->MenuLeft[$key2]);
+			}
 		}
 		
 		$this->assign('CurrentUrl',$CurrentUrl);
@@ -173,6 +202,10 @@ class HjCheck extends Controller{
 	
 	static function logout(){
 	    session('AuthRoleID',null);
+	}
+	
+	static function getRoleID(){
+		return session('AuthRoleID');
 	}
 	
 	
