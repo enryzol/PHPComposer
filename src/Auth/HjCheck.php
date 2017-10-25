@@ -24,6 +24,8 @@ class HjCheck extends Controller{
     protected $Menu ;
     protected $AuthMenu;
     protected $su = 0;
+    protected $Db_Role = 'h_role';
+    protected $Db_Role_Auth = 'h_role_auth';
     
 	protected $beforeActionList = [
 		'checkLogin','getMenu'
@@ -36,11 +38,11 @@ class HjCheck extends Controller{
 	    $request = \think\Request::instance();
 	    
 	    //超级管理员
-	    $or = db('role');
+	    $or = db($this->Db_Role);
 	    $rinfo = $or->where(['roleid'=>session('AuthRoleID')])->find();
 	    $this->su = $rinfo['su'];
 	    
-	    $ob = db('role_auth');
+	    $ob = db($this->Db_Role_Auth);
 	    
 	    //验证权限 - 除了超级管理员
 	    if($this->su == 0){
@@ -66,9 +68,10 @@ class HjCheck extends Controller{
 	        }
 	    }
 	    
+	    return true;
 	}
 	function getMenu(){
-		$Module = Config::get('AuthModule');
+		$Module = Config::get('AuthModule'); //获取配置菜单文件
 		$MenuLeft = [];  //普通用户菜单组
 		$Menu = [];
 		$MenuSuperUser = []; //超级管理员 菜单组
@@ -76,16 +79,22 @@ class HjCheck extends Controller{
 		$request = \think\Request::instance();
 		$CurrentUrl = $request->controller().'_'.$request->action();
 		
+		//遍历每个类配置
 		foreach($Module['MuduleList'] as $key=>$value){
+		    //$value = 每个类
+		    
+		    //$class_methods获取每个大类的方法
 			$class_methods = get_class_methods($Module['Namespace'].'\\'.$value['Mudule']);
 			if(empty($class_methods)){ continue;}
+			//$class_vars获取每个大类的方法的描述
 			$class_vars = get_class_vars($Module['Namespace'].'\\'.$value['Mudule']);
 			
 			//菜单列表
+			//$Menu[System] = 大菜单配置
 			$Menu[$value['Mudule']]['name'] = $value['Name'];
 			$Menu[$value['Mudule']]['module'] = $value['Mudule'];
 			
-			//当模块设置为MenuShow = false 的时候，模块不显示在菜单上
+			//当模块设置为MenuShow = false 的时候，模块不显示在菜单上 大菜单
 			if($value['MenuShow']!==false){
 				$MenuLeft[$value['Mudule']]['name'] = $value['Name'];
 				$MenuLeft[$value['Mudule']]['module'] = $value['Mudule'];
@@ -93,12 +102,16 @@ class HjCheck extends Controller{
 				$MenuSuperUser[$value['Mudule']]['name'] = $value['Name'];
 				$MenuSuperUser[$value['Mudule']]['module'] = $value['Mudule'];
 			}
+			
+			//$class_methods每个大类的方法
 			foreach($class_methods as $key1=>$value1){
 			    
 			    //读取action配置
 			    if(!array_key_exists($value1,$class_vars)){
 			        continue;
 			    }
+			    
+			    //$class_vars每个大类的方法的描述
 			    $config = ($class_vars[$value1]);
 			    if(!isset($config['hide'])){
 			        $config['hide'] = false;
@@ -138,7 +151,9 @@ class HjCheck extends Controller{
 				    ];
 				}
 				
-				if($request->controller() == $value['Mudule'] && $request->action() == $value1){
+				if(strtolower($request->controller()) == strtolower($value['Mudule']) 
+				    && strtolower($request->action()) == strtolower($value1)){
+				    //遍历所有菜单，得到当前菜单取出配置
 				    $tmp = isset($config['active'])?$config['active']:$value1;
 				    $CurrentUrl = $value['Mudule']."_".$tmp;
 				}
@@ -168,14 +183,14 @@ class HjCheck extends Controller{
 	}
 	
 	function getAuthMenu($roleid){
-	    $ob = \think\Db::name('role_auth');
+	    $ob = \think\Db::name($this->Db_Role_Auth);
 	    $list = $ob->where(['roleid'=>$roleid])->select();
 	    return $list;
 	}
 	
 	function saveAuthMenu($roleid,$menus,$rolename='',$remark=''){
-	    $or = db('role');
-	    $ob = db('role_auth');
+	    $or = db($this->Db_Role);
+	    $ob = db($this->Db_Role_Auth);
 	    
 	    if(empty($roleid)){
 	        $or->insert(['rolename'=>$rolename,'remark'=>$remark]);
