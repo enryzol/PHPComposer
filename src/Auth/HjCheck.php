@@ -122,8 +122,13 @@ class HjCheck extends Controller{
 				    if(isset($config['name'])){
 				        $Menu[$value['Mudule']]['value'][] = [
 				            'name'	=> 	$config['name'],
+				        	'desc'	=> 	$config['desc'],
 				            'action'=> 	$value1
 				        ];
+				    }
+				    
+				    if(!isset($config['urldata'])){
+				    	$config['urldata'] = [];
 				    }
 					
 				}
@@ -138,7 +143,7 @@ class HjCheck extends Controller{
     						'active'	  => 	isset($config['active'])?$config['active']:$value1,
     						'module'      => 	$value['Mudule'],
     						'action'      => 	$value1,
-    						'url'	      =>    URL($value['Mudule'].'/'.$value1)
+				        	'url'	      =>    URL($value['Mudule'].'/'.$value1,$config['urldata'])
     					];
 				    }
     					
@@ -147,7 +152,7 @@ class HjCheck extends Controller{
 			    		'active'	  => 	isset($config['active'])?$config['active']:$value1,
 			    		'module'      => 	$value['Mudule'],
 			    		'action'      => 	$value1,
-			    		'url'	      =>    URL($value['Mudule'].'/'.$value1)
+				    	'url'	      =>    URL($value['Mudule'].'/'.$value1,$config['urldata'])
 				    ];
 				}
 				
